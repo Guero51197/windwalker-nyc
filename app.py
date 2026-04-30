@@ -15,6 +15,7 @@ Deploy:
 import streamlit as st
 import folium
 from streamlit_folium import st_folium
+from streamlit_searchbox import st_searchbox
 import math, time as time_mod
 
 # ── page config (must be first Streamlit call) ───────────────────────────────
@@ -229,12 +230,30 @@ if not ENGINE_OK:
 # ── input columns ─────────────────────────────────────────────────────────────
 col_form, col_map = st.columns([1, 2], gap="large")
 
+def nominatim_search(query: str) -> list[str]:
+    """Return address suggestions from Nominatim for NYC."""
+    if not query or len(query) < 3:
+        return []
+    try:
+        import requests as _req
+        r = _req.get(
+            "https://nominatim.openstreetmap.org/search",
+            params={"q": query + ", New York", "format": "json",
+                    "limit": 6, "countrycodes": "us",
+                    "addressdetails": 0},
+            headers={"User-Agent": "WindWalkerNYC/1.0"},
+            timeout=3,
+        )
+        return [item["display_name"] for item in r.json()]
+    except Exception:
+        return []
+
 with col_form:
     st.markdown("#### 📍 Route")
-    origin = st.text_input("From", value="",
-                            placeholder="e.g. Penn Station, New York, NY")
-    dest   = st.text_input("To",   value="",
-                            placeholder="e.g. Grand Central Terminal, New York, NY")
+    origin = st_searchbox(nominatim_search, placeholder="From — e.g. Penn Station",
+                          label="From", key="origin_box")
+    dest   = st_searchbox(nominatim_search, placeholder="To — e.g. Grand Central",
+                          label="To", key="dest_box")
 
     # ── time picker ──────────────────────────────────────────────────────────
     st.markdown("#### ⏰ When are you walking?")
