@@ -1,5 +1,5 @@
 """
-WindWalker NYC â Streamlit Web App
+WindWalker NYC — Streamlit Web App
 ===================================
 Find the wind-sheltered walking route between two NYC addresses,
 using live weather + real building geometry + the canyon wind formula.
@@ -9,7 +9,7 @@ Run locally:
     streamlit run app.py
 
 Deploy:
-    Push to GitHub â connect on share.streamlit.io â one-click deploy
+    Push to GitHub → connect on share.streamlit.io → one-click deploy
 """
 
 import streamlit as st
@@ -17,15 +17,15 @@ import folium
 from streamlit_folium import st_folium
 import math, time as time_mod
 
-# ââ page config (must be first Streamlit call) âââââââââââââââââââââââââââââââ
+# ── page config (must be first Streamlit call) ───────────────────────────────
 st.set_page_config(
     page_title="WindWalker NYC",
-    page_icon="ð¬",
+    page_icon="🌬",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
 
-# ââ import the engine âââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ── import the engine ─────────────────────────────────────────────────────────
 try:
     from windwalker_core import run, fetch_hourly_wind, describe_wind
     ENGINE_OK = True
@@ -33,19 +33,19 @@ except ImportError as e:
     ENGINE_OK = False
     ENGINE_ERR = str(e)
 
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ═════════════════════════════════════════════════════════════════════════════
 # STYLES
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ═════════════════════════════════════════════════════════════════════════════
 st.markdown("""
 <style>
-  /* ââ global ââ */
+  /* ── global ── */
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
   html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 
-  /* ââ hide Streamlit chrome ââ */
+  /* ── hide Streamlit chrome ── */
   #MainMenu, footer, header { visibility: hidden; }
 
-  /* ââ hero header ââ */
+  /* ── hero header ── */
   .hero {
     background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 60%, #0e4d6b 100%);
     border-radius: 16px;
@@ -56,7 +56,7 @@ st.markdown("""
   .hero h1 { font-size: 2.6rem; font-weight: 900; margin: 0; letter-spacing: -0.5px; }
   .hero p  { font-size: 1.05rem; opacity: 0.75; margin: 6px 0 0; }
 
-  /* ââ metric cards ââ */
+  /* ── metric cards ── */
   .metric-row { display: flex; gap: 12px; margin: 16px 0; }
   .metric-card {
     background: white;
@@ -70,7 +70,7 @@ st.markdown("""
   .metric-card .value { font-size: 1.6rem; font-weight: 800; color: #0f172a; line-height: 1.1; margin-top: 4px; }
   .metric-card .sub   { font-size: .8rem; color: #94a3b8; margin-top: 2px; }
 
-  /* ââ route comparison ââ */
+  /* ── route comparison ── */
   .route-box {
     border-radius: 12px;
     padding: 18px 22px;
@@ -82,7 +82,7 @@ st.markdown("""
   .route-box .route-title { font-weight: 700; font-size: 1rem; margin-bottom: 4px; }
   .route-box .route-stat  { font-size: .88rem; color: #475569; }
 
-  /* ââ wind badge ââ */
+  /* ── wind badge ── */
   .wind-badge {
     display: inline-flex; align-items: center; gap: 8px;
     padding: 8px 16px; border-radius: 999px;
@@ -90,7 +90,7 @@ st.markdown("""
     margin-bottom: 8px;
   }
 
-  /* ââ reduction pill ââ */
+  /* ── reduction pill ── */
   .pill {
     display: inline-block;
     padding: 4px 14px;
@@ -102,7 +102,7 @@ st.markdown("""
   .pill-yellow { background: #fef9c3; color: #854d0e; }
   .pill-grey   { background: #f1f5f9; color: #475569; }
 
-  /* ââ sidebar / inputs ââ */
+  /* ── sidebar / inputs ── */
   .stTextInput input { border-radius: 8px !important; }
   .stButton button {
     width: 100%; border-radius: 10px !important;
@@ -116,9 +116,9 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ═════════════════════════════════════════════════════════════════════════════
 # HELPERS
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ═════════════════════════════════════════════════════════════════════════════
 
 WIND_COLORS = {
     "calm":     "#4ade80",
@@ -141,7 +141,7 @@ def build_map(result: dict) -> folium.Map:
            (result["orig_ll"][1] + result["dest_ll"][1]) / 2]
     m = folium.Map(location=mid, zoom_start=15, tiles="CartoDB positron")
 
-    # ââ wind heat overlay (all streets, colour = wind score) âââââââââââââââââ
+    # ── wind heat overlay (all streets, colour = wind score) ─────────────────
     for ed in result["edge_data"]:
         coords_ll = [(c[0], c[1]) for c in ed["coords"]]
         folium.PolyLine(
@@ -151,23 +151,23 @@ def build_map(result: dict) -> folium.Map:
             tooltip=f"Wind score: {ed['score']:.1f} | Canyon: {ed['canyon']:.2f}",
         ).add_to(m)
 
-    # ââ shortest route (blue, dashed) ââââââââââââââââââââââââââââââââââââââââ
+    # ── shortest route (blue, dashed) ────────────────────────────────────────
     short_coords = [(c[0], c[1]) for c in result["short_s"]["coords"]]
     folium.PolyLine(
         short_coords,
         color="#2563eb", weight=5, opacity=0.9, dash_array="8 4",
-        tooltip=f"Direct route: {result['short_s']['length_m']}m Â· {result['short_s']['length_min']} min",
+        tooltip=f"Direct route: {result['short_s']['length_m']}m · {result['short_s']['length_min']} min",
     ).add_to(m)
 
-    # ââ sheltered route (green, solid) âââââââââââââââââââââââââââââââââââââââ
+    # ── sheltered route (green, solid) ───────────────────────────────────────
     wind_coords = [(c[0], c[1]) for c in result["wind_s"]["coords"]]
     folium.PolyLine(
         wind_coords,
         color="#16a34a", weight=6, opacity=0.95,
-        tooltip=f"Sheltered route: {result['wind_s']['length_m']}m Â· {result['wind_s']['length_min']} min",
+        tooltip=f"Sheltered route: {result['wind_s']['length_m']}m · {result['wind_s']['length_min']} min",
     ).add_to(m)
 
-    # ââ origin / destination markers âââââââââââââââââââââââââââââââââââââââââ
+    # ── origin / destination markers ─────────────────────────────────────────
     folium.Marker(
         result["orig_ll"],
         popup="Start",
@@ -179,7 +179,7 @@ def build_map(result: dict) -> folium.Map:
         icon=folium.Icon(color="green", icon="flag", prefix="fa"),
     ).add_to(m)
 
-    # ââ legend âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+    # ── legend ───────────────────────────────────────────────────────────────
     legend_html = """
     <div style="position:fixed;bottom:20px;right:20px;z-index:1000;
                 background:white;border-radius:10px;padding:12px 16px;
@@ -190,7 +190,7 @@ def build_map(result: dict) -> folium.Map:
       <div style="margin-top:4px"><span style="display:inline-block;width:28px;height:3px;
            background:#16a34a;margin-right:6px;vertical-align:middle;"></span>Sheltered</div>
       <div style="font-weight:700;margin:8px 0 4px;">Wind exposure</div>
-      <div>ð¢ Low &nbsp; ð¡ Moderate &nbsp; ð  High &nbsp; ð´ Very high</div>
+      <div>🟢 Low &nbsp; 🟡 Moderate &nbsp; 🟠 High &nbsp; 🔴 Very high</div>
     </div>
     """
     m.get_root().html.add_child(folium.Element(legend_html))
@@ -200,44 +200,44 @@ def build_map(result: dict) -> folium.Map:
 def reduction_pill(pct: float) -> str:
     if pct >= 15:
         cls = "pill-green"
-        txt = f"â {pct:.1f}% less wind"
+        txt = f"↓ {pct:.1f}% less wind"
     elif pct >= 5:
         cls = "pill-yellow"
-        txt = f"â {pct:.1f}% less wind"
+        txt = f"↓ {pct:.1f}% less wind"
     else:
         cls = "pill-grey"
         txt = "Similar wind exposure"
     return f'<span class="pill {cls}">{txt}</span>'
 
 
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ═════════════════════════════════════════════════════════════════════════════
 # MAIN UI
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ═════════════════════════════════════════════════════════════════════════════
 
-# ââ hero âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ── hero ─────────────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="hero">
-  <h1>ð¬ WindWalker NYC</h1>
-  <p>Find the wind-sheltered walking route â live weather Â· real building heights Â· urban canyon formula</p>
+  <h1>🌬 WindWalker NYC</h1>
+  <p>Find the wind-sheltered walking route — live weather · real building heights · urban canyon formula</p>
 </div>
 """, unsafe_allow_html=True)
 
 if not ENGINE_OK:
-    st.error(f"â  Engine import failed: `{ENGINE_ERR}`. Make sure `windwalker_core.py` is in the same folder.")
+    st.error(f"⚠ Engine import failed: `{ENGINE_ERR}`. Make sure `windwalker_core.py` is in the same folder.")
     st.stop()
 
-# ââ input columns âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ── input columns ─────────────────────────────────────────────────────────────
 col_form, col_map = st.columns([1, 2], gap="large")
 
 with col_form:
-    st.markdown("#### ð Route")
+    st.markdown("#### 📍 Route")
     origin = st.text_input("From", value="",
                             placeholder="e.g. Penn Station, New York, NY")
     dest   = st.text_input("To",   value="",
                             placeholder="e.g. Grand Central Terminal, New York, NY")
 
-    # ââ time picker ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-    st.markdown("#### â° When are you walking?")
+    # ── time picker ──────────────────────────────────────────────────────────
+    st.markdown("#### ⏰ When are you walking?")
     @st.cache_data(ttl=1800)
     def get_forecast():
         try:
@@ -255,57 +255,57 @@ with col_form:
                                 format_func=lambda i: labels[i])
     else:
         hour_idx = 0
-        st.caption("Could not load forecast â will use current conditions.")
+        st.caption("Could not load forecast — will use current conditions.")
 
-    # ââ run button âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-    run_btn = st.button("ð Find Wind-Sheltered Route", use_container_width=True,
+    # ── run button ───────────────────────────────────────────────────────────
+    run_btn = st.button("🔍 Find Wind-Sheltered Route", use_container_width=True,
                         disabled=(not origin.strip() or not dest.strip()))
     if run_btn and (not origin.strip() or not dest.strip()):
         st.warning("Please enter both a start and end address.")
 
-    # ââ result panel (below button, in form column) âââââââââââââââââââââââââââ
+    # ── result panel (below button, in form column) ───────────────────────────
     if "result" in st.session_state and st.session_state.result:
         res = st.session_state.result
         w   = res["wind"]
 
         st.markdown("---")
-        st.markdown("#### ð¬ Wind conditions")
+        st.markdown("#### 🌬 Wind conditions")
         badge_color = WIND_COLORS.get(w["severity"], "#94a3b8")
         st.markdown(
             f'<div class="wind-badge" style="background:{badge_color}20;color:{badge_color};">'
-            f'{w["emoji"]} {w["description"]} â <em>{w["severity"]}</em></div>',
+            f'{w["emoji"]} {w["description"]} — <em>{w["severity"]}</em></div>',
             unsafe_allow_html=True,
         )
-        st.caption(f"Gusts up to {res['wind_gusts']} mph Â· {res['wind_time']}")
+        st.caption(f"Gusts up to {res['wind_gusts']} mph · {res['wind_time']}")
 
-        st.markdown("#### ðº Route comparison")
+        st.markdown("#### 🗺 Route comparison")
         st.markdown(f"""
         <div class="route-box route-shortest">
-          <div class="route-title">ðµ Direct route</div>
-          <div class="route-stat">{res['short_s']['length_m']}m &nbsp;Â·&nbsp; ~{res['short_s']['length_min']} min
-          &nbsp;Â·&nbsp; wind score {res['short_s']['avg_wind_score']}</div>
+          <div class="route-title">🔵 Direct route</div>
+          <div class="route-stat">{res['short_s']['length_m']}m &nbsp;·&nbsp; ~{res['short_s']['length_min']} min
+          &nbsp;·&nbsp; wind score {res['short_s']['avg_wind_score']}</div>
         </div>
         <div class="route-box route-sheltered">
-          <div class="route-title">ð¢ Sheltered route &nbsp; {reduction_pill(res['reduction'])}</div>
-          <div class="route-stat">{res['wind_s']['length_m']}m &nbsp;Â·&nbsp; ~{res['wind_s']['length_min']} min
-          &nbsp;Â·&nbsp; wind score {res['wind_s']['avg_wind_score']}</div>
+          <div class="route-title">🟢 Sheltered route &nbsp; {reduction_pill(res['reduction'])}</div>
+          <div class="route-stat">{res['wind_s']['length_m']}m &nbsp;·&nbsp; ~{res['wind_s']['length_min']} min
+          &nbsp;·&nbsp; wind score {res['wind_s']['avg_wind_score']}</div>
         </div>
         """, unsafe_allow_html=True)
 
         if res["same_route"]:
             st.info("Both routes are identical at this wind level.")
 
-        with st.expander("ð Details"):
+        with st.expander("📊 Details"):
             st.write(f"**Buildings loaded:** {res['n_buildings']:,} "
-                     f"({'PLUTO â' if res['used_pluto'] else 'OSM fallback'})")
+                     f"({'PLUTO ✅' if res['used_pluto'] else 'OSM fallback'})")
             st.write(f"**Street edges scored:** {res['n_edges']:,}")
-            st.write(f"**Wind direction:** {w['direction']}Â° ({w['compass']})")
+            st.write(f"**Wind direction:** {w['direction']}° ({w['compass']})")
             st.write(f"**Canyon tunnel risk:** {'Yes' if w['tunnel_risk'] else 'Low'}")
 
-# ââ map column ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ── map column ────────────────────────────────────────────────────────────────
 with col_map:
     if run_btn:
-        with st.spinner("ð Fetching wind, buildings & streetsâ¦"):
+        with st.spinner("🔄 Fetching wind, buildings & streets…"):
             prog_bar = st.progress(0)
             status   = st.empty()
 
@@ -325,26 +325,26 @@ with col_map:
             except Exception as e:
                 prog_bar.empty()
                 status.empty()
-                st.error(f"â {e}")
+                st.error(f"❌ {e}")
                 st.session_state.result = None
 
     if "result" in st.session_state and st.session_state.result:
         fmap = build_map(st.session_state.result)
         st_folium(fmap, width=None, height=540, returned_objects=[])
     else:
-        # placeholder map â Manhattan
+        # placeholder map — Manhattan
         m0 = folium.Map(location=[40.754, -73.984], zoom_start=14,
                         tiles="CartoDB positron")
         st_folium(m0, width=None, height=540, returned_objects=[])
         st.caption("Enter addresses above and click **Find Wind-Sheltered Route**.")
 
-# ââ footer ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ── footer ────────────────────────────────────────────────────────────────────
 st.markdown("---")
 st.markdown(
     '<div style="text-align:center;color:#94a3b8;font-size:.8rem;">'
-    'ð¬ WindWalker NYC &nbsp;Â·&nbsp; '
-    'Formula: <code>wind_score = wind_speed Ã |cos(bearing â wind_dir)| Ã canyon_factor</code> &nbsp;Â·&nbsp; '
-    'Data: Open-Meteo Â· OpenStreetMap Â· NYC PLUTO'
+    '🌬 WindWalker NYC &nbsp;·&nbsp; '
+    'Formula: <code>wind_score = wind_speed × |cos(bearing − wind_dir)| × canyon_factor</code> &nbsp;·&nbsp; '
+    'Data: Open-Meteo · OpenStreetMap · NYC PLUTO'
     '</div>',
     unsafe_allow_html=True,
 )
