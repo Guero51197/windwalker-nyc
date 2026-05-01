@@ -277,9 +277,11 @@ with col_form:
         st.caption("Could not load forecast — will use current conditions.")
 
     # ── run button ───────────────────────────────────────────────────────────
+    origin_val = (origin or "").strip()
+    dest_val   = (dest   or "").strip()
     run_btn = st.button("🔍 Find Wind-Sheltered Route", use_container_width=True,
-                        disabled=(not origin.strip() or not dest.strip()))
-    if run_btn and (not origin.strip() or not dest.strip()):
+                        disabled=(not origin_val or not dest_val))
+    if run_btn and (not origin_val or not dest_val):
         st.warning("Please enter both a start and end address.")
 
     # ── result panel (below button, in form column) ───────────────────────────
@@ -334,7 +336,7 @@ with col_map:
 
             try:
                 result = run(
-                    origin, dest,
+                    origin_val, dest_val,
                     forecast_hour_index=hour_idx,
                     progress_cb=on_progress,
                 )
